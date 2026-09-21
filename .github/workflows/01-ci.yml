@@ -1,14 +1,14 @@
 name: 01 - CI
 
 on:
-  # Trigger the workflow on push to main branch
+  # Trigger on main and the Task 10.2D development branch
   push:
     branches:
       - main
-  
-  # Manual trigger for the workflow
-  workflow_dispatch:
+      - task-10.2d-devsecops
 
+  # Manual trigger
+  workflow_dispatch:
 
 jobs:
 
@@ -103,17 +103,16 @@ jobs:
 
 
   # =========================================================
-  # Build and Push Docker Images
+  # Build, Security Scan and Push Docker Images
   # =========================================================
   build-and-push:
-    name: Build and Push ${{ matrix.image }}
+    name: Build, Scan and Push ${{ matrix.image }}
     runs-on: ubuntu-latest
 
-    # All backend tests must pass before this job starts
+    # All backend tests must pass before images are built
     needs:
       - backend-test
 
-    # Build and push when code is pushed to main or manually triggered
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     strategy:
@@ -153,12 +152,29 @@ jobs:
         run: |
           az acr login --name ${{ vars.ACR_NAME }}
 
+      - name: Login to Docker Hub for Docker Scout
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build Docker image
         run: |
           docker build \
             --platform linux/amd64 \
             -t ${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }} \
             ./${{ matrix.service }}
+
+      # ---------------------------------------------------------
+      # DevSecOps security gate: scan before image is pushed
+      # ---------------------------------------------------------
+      - name: Docker Scout CVE Scan
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: local://${{ vars.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ github.sha }}
+          only-severities: critical,high
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push Docker image with commit SHA
         run: |
