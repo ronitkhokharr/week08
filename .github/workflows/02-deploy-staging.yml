@@ -38,6 +38,40 @@ jobs:
             --name ${{ vars.AKS_CLUSTER_NAME }} \
             --overwrite-existing
 
+      # ---------------------------------------------------------
+      # Task 10.2D - Monitoring integration
+      # ---------------------------------------------------------
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Deploy Prometheus and Grafana
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+
+          helm upgrade --install monitoring \
+            prometheus-community/kube-prometheus-stack \
+            --namespace monitoring \
+            --create-namespace \
+            --wait \
+            --timeout 10m
+
+      - name: Verify Prometheus and Grafana
+        run: |
+          echo "=== Monitoring Pods ==="
+          kubectl get pods -n monitoring
+
+          echo "=== Monitoring Services ==="
+          kubectl get services -n monitoring
+
+          echo "=== Prometheus Instance ==="
+          kubectl get prometheus -n monitoring
+
+      # ---------------------------------------------------------
+      # Staging application deployment
+      # ---------------------------------------------------------
+
       - name: Create staging namespace
         run: |
           kubectl create namespace staging \
@@ -146,6 +180,16 @@ jobs:
 
       - name: Show staging resources
         run: |
+          echo "=== Staging Pods ==="
           kubectl get pods -n staging
+
+          echo "=== Staging Services ==="
           kubectl get services -n staging
+
+          echo "=== Staging PVCs ==="
           kubectl get pvc -n staging
+
+      - name: Final monitoring status
+        run: |
+          echo "=== Prometheus and Grafana Final Status ==="
+          kubectl get pods -n monitoring
