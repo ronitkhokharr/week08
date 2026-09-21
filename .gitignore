@@ -209,4 +209,5 @@ crash.*.log
 
 # Terraform CLI configuration
 .terraformrc
-terraform.rcgrafana-password.txt
+terraform.rc
+grafana-password.txt
