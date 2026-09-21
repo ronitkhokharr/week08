@@ -8,6 +8,7 @@ on:
       - completed
     branches:
       - main
+      - task-10.2d-devsecops
 
 jobs:
   deploy-staging:
