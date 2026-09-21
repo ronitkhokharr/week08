@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - task-10.2d-devsecops
     paths:
       - "terraform/**"
       - ".github/workflows/00-terraform.yml"
